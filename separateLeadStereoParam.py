@@ -120,7 +120,7 @@ def stft(data, window=sinebell(2048), hopsize=256.0, nfft=2048.0, \
     
     # !!! adding zeros to the beginning of data, such that the first
     # window is centered on the first sample of data
-    data = np.concatenate((np.zeros(lengthWindow / 2.0),data))          
+    data = np.concatenate((np.zeros(int(lengthWindow / 2)),data))          
     lengthData = data.size
     
     # adding one window for the last frame (same reason as for the
@@ -129,19 +129,19 @@ def stft(data, window=sinebell(2048), hopsize=256.0, nfft=2048.0, \
                            + 1) + 1  
     newLengthData = (numberFrames - 1) * hopsize + lengthWindow
     # zero-padding data such that it holds an exact number of frames
-    data = np.concatenate((data, np.zeros([newLengthData - lengthData])))
+    data = np.concatenate((data, np.zeros([int(newLengthData - lengthData)])))
     
     # the output STFT has nfft/2+1 rows. Note that nfft has to be an
     # even number (and a power of 2 for the fft to be fast)
     numberFrequencies = nfft / 2.0 + 1
     
-    STFT = np.zeros([numberFrequencies, numberFrames], dtype=complex)
+    STFT = np.zeros([int(numberFrequencies), int(numberFrames)], dtype=complex)
     
     for n in np.arange(numberFrames):
-        beginFrame = n * hopsize
-        endFrame = beginFrame + lengthWindow
+        beginFrame = int(n * hopsize)
+        endFrame = int(beginFrame + lengthWindow)
         frameToProcess = window * data[beginFrame:endFrame]
-        STFT[:,n] = np.fft.rfft(frameToProcess, nfft);
+        STFT[:,int(n)] = np.fft.rfft(frameToProcess, int(nfft));
         
     F = np.arange(numberFrequencies) / nfft * fs
     N = np.arange(numberFrames) * hopsize / fs
@@ -186,7 +186,7 @@ def istft(X, window=sinebell(2048), hopsize=256.0, nfft=2048.0):
         
     # remove the extra bit before data that was - supposedly - added
     # in the stft computation:
-    data = data[(lengthWindow / 2.0):] 
+    data = data[int(lengthWindow / 2):] 
     return data
 
 # DEFINING THE FUNCTIONS TO CREATE THE 'BASIS' WF0
@@ -260,26 +260,26 @@ def generate_WF0_chirped(minF0, maxF0, Fs, Nfft=2048, stepNotes=4, \
     numberElementsInWF0 = numberOfF0 * perF0
     
     # computing the desired WF0 matrix
-    WF0 = np.zeros([Nfft, numberElementsInWF0],dtype=np.double)
+    WF0 = np.zeros([int(Nfft), int(numberElementsInWF0)],dtype=np.double)
     for fundamentalFrequency in np.arange(numberOfF0):
         odgd, odgdSpec = \
-              generate_ODGD_spec(F0Table[fundamentalFrequency], Fs, \
+              generate_ODGD_spec(F0Table[int(fundamentalFrequency)], Fs, \
                                  Ot=Ot, lengthOdgd=lengthWindow, \
                                  Nfft=Nfft, t0=0.0,\
                                  analysisWindowType=analysisWindow) # 20100924 trying with hann window
-        WF0[:,fundamentalFrequency * perF0] = np.abs(odgdSpec) ** 2
+        WF0[:,int(fundamentalFrequency * perF0)] = np.abs(odgdSpec) ** 2
         for chirpNumber in np.arange(perF0 - 1):
-            F2 = F0Table[fundamentalFrequency] \
+            F2 = F0Table[int(fundamentalFrequency)] \
                  * (2 ** ((chirpNumber + 1.0) * depthChirpInSemiTone \
                           / (12.0 * (perF0 - 1.0))))
             # F0 is the mean of F1 and F2.
-            F1 = 2.0 * F0Table[fundamentalFrequency] - F2 
+            F1 = 2.0 * F0Table[int(fundamentalFrequency)] - F2 
             odgd, odgdSpec = \
                   generate_ODGD_spec_chirped(F1, F2, Fs, \
                                              Ot=Ot, \
                                              lengthOdgd=lengthWindow, \
                                              Nfft=Nfft, t0=0.0)
-            WF0[:,fundamentalFrequency * perF0 + chirpNumber + 1] = \
+            WF0[:,int(fundamentalFrequency * perF0 + chirpNumber + 1)] = \
                                        np.abs(odgdSpec) ** 2
     
     np.savez(filename, F0Table=F0Table, WF0=WF0)
@@ -425,7 +425,7 @@ def generateHannBasis(numberFrequencyBins, sizeOfFourier, Fs, \
         mappingFrequency = np.arange(numberFrequencyBins) 
         
         # size of the "big" window
-        sizeBigWindow = 2.0 * numberFrequencyBins
+        sizeBigWindow = int(2 * numberFrequencyBins)
         
         # centers for each window
         ## the first window is centered at, in number of window:
@@ -447,7 +447,7 @@ def generateHannBasis(numberFrequencyBins, sizeOfFourier, Fs, \
         
     # checking whether the required scale is recognized
     if not(isScaleRecognized):
-        print "The desired feature for frequencyScale is not recognized yet..."
+        print("The desired feature for frequencyScale is not recognized yet...")
         return 0
     
     # the shape of one window:
@@ -455,9 +455,7 @@ def generateHannBasis(numberFrequencyBins, sizeOfFourier, Fs, \
     # adding zeroes on both sides, such that we do not need to check
     # for boundaries
     bigWindow = np.zeros([sizeBigWindow * 2, 1])
-    bigWindow[(sizeBigWindow - lengthSineWindow / 2.0):\
-              (sizeBigWindow + lengthSineWindow / 2.0)] \
-              = np.vstack(prototypeSineWindow)
+    bigWindow[ int(sizeBigWindow - lengthSineWindow / 2): int(sizeBigWindow + lengthSineWindow / 2)]  = np.vstack(prototypeSineWindow)
     
     WGAMMA = np.zeros([numberFrequencyBins, numberOfBasis])
     
@@ -571,14 +569,14 @@ def main():
     if options.pitch_output_file is None:
         options.pitch_output_file = inputAudioFile[:-4]+'_pitches.txt'
     
-    print "Writing the different following output files:"
-    print "    separated lead          in", options.voc_output_file
-    print "    separated accompaniment in", options.mus_output_file
-    print "    separated lead + unvoc  in", options.voc_output_file[:-4] + \
-          '_VUIMM.wav'
-    print "    separated acc  - unvoc  in", options.mus_output_file[:-4] + \
-          '_VUIMM.wav'
-    print "    estimated pitches       in", options.pitch_output_file
+    print("Writing the different following output files:")
+    print("    separated lead          in", options.voc_output_file)
+    print("    separated accompaniment in", options.mus_output_file)
+    print("    separated lead + unvoc  in", options.voc_output_file[:-4] + \
+          '_VUIMM.wav')
+    print("    separated acc  - unvoc  in", options.mus_output_file[:-4] + \
+          '_VUIMM.wav')
+    print("    estimated pitches       in", options.pitch_output_file)
     
     Fs, data = wav.read(inputAudioFile)
     # data = np.double(data) /  32768.0 # makes data vary from -1 to 1
@@ -587,19 +585,19 @@ def main():
     data = np.double(data) / scaleData # makes data vary from -1 to 1
     is_stereo = True
     if data.shape[0] == data.size: # data is multi-channel
-        print "The audio file is not stereo. Making stereo out of mono."
-        print "(You could also try the older separateLead.py...)"
+        print("The audio file is not stereo. Making stereo out of mono.")
+        print("(You could also try the older separateLead.py...)")
         is_stereo = False
         # data = np.vstack([data,data]).T 
         # raise ValueError("number of dimensions of the input not 2")
     if is_stereo and data.shape[1] != 2:
-        print "The data is multichannel, but not stereo... \n"
-        print "Unfortunately this program does not scale well. Data is \n"
-        print "reduced to its 2 first channels.\n"
+        print("The data is multichannel, but not stereo... \n")
+        print("Unfortunately this program does not scale well. Data is \n")
+        print("reduced to its 2 first channels.\n")
         data = data[:,0:2]
     
     # Processing the options:
-    windowSizeInSamples = nextpow2(np.round(options.windowSize * Fs))
+    windowSizeInSamples = int(nextpow2(np.round(options.windowSize * Fs)) )
     
     hopsize = np.round(options.hopsize * Fs)
     if hopsize != windowSizeInSamples/8:
@@ -621,12 +619,12 @@ def main():
     eps = 10 ** -9
     
     if options.verbose:
-        print "Some parameter settings:"
-        print "    Size of analysis windows: ", windowSizeInSamples
-        print "    Hopsize: ", hopsize
-        print "    Size of Fourier transforms: ", NFT
-        print "    Number of iterations to be done: ", niter
-        print "    Number of elements in WM: ", R 
+        print("Some parameter settings:")
+        print("    Size of analysis windows: ", windowSizeInSamples)
+        print("    Hopsize: ", hopsize)
+        print("    Size of Fourier transforms: ", NFT)
+        print("    Number of iterations to be done: ", niter)
+        print("    Number of elements in WM: ", R)
         
     if is_stereo:
         XR, F, N = stft(data[:,0], fs=Fs, hopsize=hopsize,
@@ -787,30 +785,16 @@ def main():
             np.maximum(\
                 np.minimum(\
                     np.outer(chirpPerF0 * indexBestPath,
-                             np.ones(chirpPerF0 \
-                                     * (2 \
-                                        * np.floor(stepNotes / scopeAllowedHF0) \
-                                        + 1))) \
+                             np.ones( int(chirpPerF0 * (2 * np.floor(stepNotes / scopeAllowedHF0) + 1)) )) \
                     + np.outer(np.ones(N),
-                               np.arange(-chirpPerF0 \
-                                         * np.floor(stepNotes / scopeAllowedHF0),
-                                         chirpPerF0 \
-                                         * (np.floor(stepNotes / scopeAllowedHF0) \
-                                            + 1))),
+                               np.arange(-chirpPerF0 * np.floor(stepNotes / scopeAllowedHF0),
+                                         chirpPerF0 * (np.floor(stepNotes / scopeAllowedHF0) + 1))),
                     chirpPerF0 * NF0 - 1),
                 0),
-            dtype=int).reshape(1, N * chirpPerF0 \
-                               * (2 * np.floor(stepNotes / scopeAllowedHF0) \
-                                  + 1))
+            dtype=int).reshape(1, int(N * chirpPerF0 * (2 * np.floor(stepNotes / scopeAllowedHF0) + 1)))
         dim2index = np.outer(np.arange(N),
-                             np.ones(chirpPerF0 \
-                                     * (2 * np.floor(stepNotes \
-                                                     / scopeAllowedHF0) + 1), \
-                                     dtype=int)\
-                             ).reshape(1, N * chirpPerF0 \
-                                       * (2 * np.floor(stepNotes \
-                                                       / scopeAllowedHF0) \
-                                          + 1))
+                             np.ones( int(chirpPerF0 * (2 * np.floor(stepNotes / scopeAllowedHF0) + 1)), dtype=int)\
+                             ).reshape(1, int(N * chirpPerF0 * (2 * np.floor(stepNotes / scopeAllowedHF0) + 1)))
         HF00[dim1index, dim2index] = HF0[dim1index, dim2index]# HF0.max()
         
         HF00[:, indexBestPath == (NF0 - 1)] = 0.0
@@ -841,15 +825,15 @@ def main():
         melodyFromFile = np.loadtxt(options.melody)
         sizeProvidedMel = melodyFromFile.shape
         if len(sizeProvidedMel) == 1:
-            print "The melody should be provided as <Time (s)><F0 (Hz)>."
+            print("The melody should be provided as <Time (s)><F0 (Hz)>.")
             raise ValueError("Bad melody format")
         melTimeStamps = melodyFromFile[:,0] # + 1024 / np.double(Fs)
         melFreqHz = melodyFromFile[:,1]
         if minF0 > melFreqHz[melFreqHz>40.0].min() or maxF0 < melFreqHz.max():
             minF0 = melFreqHz[melFreqHz>40.0].min() *.97
             maxF0 = np.maximum(melFreqHz.max()*1.03, 2*minF0 * 1.03)
-            print "Recomputing the source basis for "
-            print "minF0 = ", minF0, "Hz and maxF0 = ", maxF0, "Hz."
+            print("Recomputing the source basis for ")
+            print("minF0 = ", minF0, "Hz and maxF0 = ", maxF0, "Hz.")
             # Create the harmonic combs, for each F0 between minF0 and maxF0: 
             F0Table, WF0 = \
                      generate_WF0_chirped(minF0, maxF0, Fs, Nfft=NFT, \
@@ -897,16 +881,10 @@ def main():
             np.maximum(\
             np.minimum(\
             np.outer(chirpPerF0 * indexBestPath,
-                     np.ones(chirpPerF0 \
-                             * (2 \
-                                * np.floor(stepNotes / scopeAllowedHF0) \
-                                + 1))) \
+                     np.ones( int(chirpPerF0 * (2 * np.floor(stepNotes / scopeAllowedHF0) + 1) ))) \
             + np.outer(np.ones(N),
-                       np.arange(-chirpPerF0 \
-                                 * np.floor(stepNotes / scopeAllowedHF0),
-                                 chirpPerF0 \
-                                 * (np.floor(stepNotes / scopeAllowedHF0) \
-                                    + 1))),
+                       np.arange(-chirpPerF0 * np.floor(stepNotes / scopeAllowedHF0),
+                                 chirpPerF0 * (np.floor(stepNotes / scopeAllowedHF0) + 1))),
             chirpPerF0 * NF0 - 1),
             0),
             dtype=int)
@@ -916,12 +894,7 @@ def main():
         ##                          + 1))
         dim1index = dim1index.reshape(1,dim1index.size)
         
-        dim2index = np.outer(np.arange(N),
-                             np.ones(chirpPerF0 \
-                                     * (2 * np.floor(stepNotes \
-                                                     / scopeAllowedHF0) + 1), \
-                                     dtype=int)\
-                             )
+        dim2index = np.outer(np.arange(N), np.ones( int(chirpPerF0 * (2 * np.floor(stepNotes / scopeAllowedHF0) + 1)), dtype=int) )
         dim2index = dim2index[indexBestPath!=0,:]
         dim2index = dim2index.reshape(1,dim2index.size)
         ## dim2index.reshape(1, N * chirpPerF0 \
@@ -974,13 +947,11 @@ def main():
             
             hatVR = (alphaR**2) * SPHI * SF0 / hatSXR * XR
             
-            vestR = istft(hatVR, hopsize=hopsize, nfft=NFT,
-                          window=sinebell(windowSizeInSamples)) / 4.0
+            vestR = istft(hatVR, hopsize=int(hopsize), nfft=int(NFT), window=sinebell(windowSizeInSamples)) / 4.0
             
             hatVR = (alphaL**2) * SPHI * SF0 / hatSXL * XL
             
-            vestL = istft(hatVR, hopsize=hopsize, nfft=NFT,
-                          window=sinebell(windowSizeInSamples)) / 4.0
+            vestL = istft(hatVR, hopsize=int(hopsize), nfft=int(NFT), window=sinebell(windowSizeInSamples)) / 4.0
             
             #scikits.audiolab.wavwrite(np.array([vestR,vestL]).T, \
             #                          options.voc_output_file, Fs)
@@ -995,13 +966,11 @@ def main():
             
             hatMR = (np.dot(np.dot(WM,betaR ** 2),HM)) / hatSXR * XR
             
-            mestR = istft(hatMR, hopsize=hopsize, nfft=NFT,
-                          window=sinebell(windowSizeInSamples)) / 4.0
+            mestR = istft(hatMR, hopsize=int(hopsize), nfft=int(NFT), window=sinebell(windowSizeInSamples)) / 4.0
             
             hatMR = (np.dot(np.dot(WM,betaL ** 2),HM)) / hatSXL * XL
             
-            mestL = istft(hatMR, hopsize=hopsize, nfft=NFT,
-                          window=sinebell(windowSizeInSamples)) / 4.0
+            mestL = istft(hatMR, hopsize=int(hopsize), nfft=int(NFT), window=sinebell(windowSizeInSamples)) / 4.0
             
             #scikits.audiolab.wavwrite(np.array([mestR,mestL]).T, \
             #                          options.mus_output_file, Fs)
@@ -1053,13 +1022,11 @@ def main():
             
             hatVR = (alphaR**2) * SPHI * SF0 / hatSXR * XR
             
-            vestR = istft(hatVR, hopsize=hopsize, nfft=NFT,
-                          window=sinebell(windowSizeInSamples)) / 4.0
+            vestR = istft(hatVR, hopsize=int(hopsize), nfft=int(NFT), window=sinebell(windowSizeInSamples)) / 4.0
             
             hatVR = (alphaL**2) * SPHI * SF0 / hatSXL * XL
             
-            vestL = istft(hatVR, hopsize=hopsize, nfft=NFT,
-                          window=sinebell(windowSizeInSamples)) / 4.0
+            vestL = istft(hatVR, hopsize=int(hopsize), nfft=int(NFT), window=sinebell(windowSizeInSamples)) / 4.0
             
             outputFileName = options.voc_output_file[:-4] + '_VUIMM.wav'
             
@@ -1070,13 +1037,11 @@ def main():
             
             hatMR = (np.dot(np.dot(WM,betaR ** 2),HM)) / hatSXR * XR
             
-            mestR = istft(hatMR, hopsize=hopsize, nfft=NFT,
-                         window=sinebell(windowSizeInSamples)) / 4.0
+            mestR = istft(hatMR, hopsize=int(hopsize), nfft=int(NFT), window=sinebell(windowSizeInSamples)) / 4.0
             
             hatMR = (np.dot(np.dot(WM,betaL ** 2),HM)) / hatSXL * XL
             
-            mestL = istft(hatMR, hopsize=hopsize, nfft=NFT,
-                         window=sinebell(windowSizeInSamples)) / 4.0
+            mestL = istft(hatMR, hopsize=int(hopsize), nfft=int(NFT), window=sinebell(windowSizeInSamples)) / 4.0
             
             outputFileName = options.mus_output_file[:-4] + '_VUIMM.wav'
             
@@ -1116,16 +1081,14 @@ def main():
             
             hatV = SPHI * SF0 / hatSX * X
             
-            vest = istft(hatV, hopsize=hopsize, nfft=NFT,
-                         window=sinebell(windowSizeInSamples)) / 4.0
+            vest = istft(hatV, hopsize=int(hopsize), nfft=int(NFT), window=sinebell(windowSizeInSamples)) / 4.0
             
             vest = np.array(np.round(vest*scaleData), dtype=dataType)
             wav.write(options.voc_output_file, Fs, vest)
             
             hatM = SM / hatSX * X
             
-            mest = istft(hatM, hopsize=hopsize, nfft=NFT,
-                         window=sinebell(windowSizeInSamples)) / 4.0
+            mest = istft(hatM, hopsize=int(hopsize), nfft=int(NFT), window=sinebell(windowSizeInSamples)) / 4.0
             
             mest = np.array(np.round(mest*scaleData), dtype=dataType)
             wav.write(options.mus_output_file, Fs, mest)
@@ -1168,8 +1131,7 @@ def main():
             
             hatV = SPHI * SF0 / hatSX * X
             
-            vest = istft(hatV, hopsize=hopsize, nfft=NFT,
-                         window=sinebell(windowSizeInSamples)) / 4.0
+            vest = istft(hatV, hopsize=int(hopsize), nfft=int(NFT), window=sinebell(windowSizeInSamples)) / 4.0
             
             vest = np.array(np.round(vest*scaleData), dtype=dataType)
             outputFileName = options.voc_output_file[:-4] + '_VUIMM.wav'
@@ -1177,8 +1139,7 @@ def main():
             
             hatM = SM / hatSX * X
             
-            mest = istft(hatM, hopsize=hopsize, nfft=NFT,
-                         window=sinebell(windowSizeInSamples)) / 4.0
+            mest = istft(hatM, hopsize=int(hopsize), nfft=int(NFT), window=sinebell(windowSizeInSamples)) / 4.0
             
             mest = np.array(np.round(mest*scaleData), dtype=dataType)
             
@@ -1189,7 +1150,7 @@ def main():
         if displayEvolution:
             plt.close('all')
             
-    print "Done!"
+    print("Done!")
 
 if __name__ == '__main__':
     main()

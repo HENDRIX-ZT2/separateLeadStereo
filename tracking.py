@@ -64,18 +64,18 @@ def viterbiTracking(logDensity, logPriorDensities, logTransitionMatrix,
     
     for n in arange(1, numberOfFrames):
         if verbose:
-            print "frame number ", n, "over ", numberOfFrames
+            print("frame number ", n, "over ", numberOfFrames)
         for state in arange(numberOfStates):
             if verbose:
-                print "     state number ",state, " over ", numberOfStates
+                print("     state number ",state, " over ", numberOfStates)
             cumulativeProbability[state, n] \
                                      = cumulativeProbability[0, n - 1] \
                                        + logTransitionMatrix[0, state]
             antecedents[state, n] = 0
             for state_ in arange(1, numberOfStates):
                 if verbose:
-                    print "          state number ",
-                    print state_, " over ", numberOfStates
+                    print("          state number ",)
+                    print(state_, " over ", numberOfStates)
                 tempCumProba = cumulativeProbability[state_, n - 1] \
                                + logTransitionMatrix[state_, state]
                 if (tempCumProba > cumulativeProbability[state, n]):
@@ -141,7 +141,7 @@ def viterbiTrackingArray(logDensity, logPriorDensities, logTransitionMatrix,
     
     for n in arange(1, numberOfFrames):
         if verbose:
-            print "frame number ", n, "over ", numberOfFrames
+            print("frame number ", n, "over ", numberOfFrames)
         # Find the state that minimizes the transition and the cumulative
         # probability. This operation can be done for all the target
         # states using numpy operations on ndarrays:
@@ -161,6 +161,6 @@ def viterbiTrackingArray(logDensity, logPriorDensities, logTransitionMatrix,
     bestStatePath[-1]= argmax(cumulativeProbability[:, numberOfFrames \
                                                                   - 1])
     for n in arange(numberOfFrames - 2, -1, -1):
-        bestStatePath[n] = antecedents[bestStatePath[n + 1], n + 1]
+        bestStatePath[n] = antecedents[int(bestStatePath[n + 1]), n + 1]
         
     return bestStatePath
